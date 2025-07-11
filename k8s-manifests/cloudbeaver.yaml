@@ -70,6 +70,10 @@ spec:
     metadata:
       labels:
         app: cloudbeaver
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8978"
+        prometheus.io/path: "/api/health"
     spec:
       containers:
       - name: cloudbeaver
