@@ -156,16 +156,17 @@ spec:
   type: ClusterIP
 ---
 # TCP Ingress for MySQL (external access)
-apiVersion: traefik.containo.us/v1alpha1
+apiVersion: traefik.io/v1alpha1
 kind: IngressRouteTCP
 metadata:
   name: mysql-tcp-ingress
-  namespace: database
+  namespace: traefik-system
 spec:
   entryPoints:
-    - mysql-tcp
+    - mysql
   routes:
   - match: HostSNI(`*`)
     services:
     - name: mysql-service
+      namespace: database
       port: 3306
