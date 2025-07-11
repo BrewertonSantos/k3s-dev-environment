@@ -1,0 +1,103 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-exporter-secret
+  namespace: database
+type: Opaque
+stringData:
+  DATA_SOURCE_NAME: "porigins:6DHq81M5PTFas0m2@(mysql-service.database.svc.cluster.local:3306)/porigins_db"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-exporter
+  namespace: database
+  labels:
+    app: mysql-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-exporter
+  template:
+    metadata:
+      labels:
+        app: mysql-exporter
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9104"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: mysql-exporter
+        image: prom/mysqld-exporter:v0.15.1
+        ports:
+        - containerPort: 9104
+          name: metrics
+        env:
+        - name: DATA_SOURCE_NAME
+          valueFrom:
+            secretKeyRef:
+              name: mysql-exporter-secret
+              key: DATA_SOURCE_NAME
+        - name: MYSQLD_EXPORTER_CONFIG_MY_CNF
+          value: ""
+        args:
+          - "--collect.info_schema.innodb_metrics"
+          - "--collect.info_schema.innodb_tablespaces"
+          - "--collect.info_schema.innodb_cmp"
+          - "--collect.info_schema.innodb_cmpmem"
+          - "--collect.info_schema.processlist"
+          - "--collect.info_schema.tables"
+          - "--collect.info_schema.tablestats"
+          - "--collect.info_schema.userstats"
+          - "--collect.perf_schema.eventsstatements"
+          - "--collect.perf_schema.eventsstatementssum"
+          - "--collect.perf_schema.eventswaits"
+          - "--collect.perf_schema.file_events"
+          - "--collect.perf_schema.file_instances"
+          - "--collect.perf_schema.indexiowaits"
+          - "--collect.perf_schema.memory_events"
+          - "--collect.perf_schema.tableiowaits"
+          - "--collect.perf_schema.tablelocks"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /metrics
+            port: 9104
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /metrics
+            port: 9104
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-exporter
+  namespace: database
+  labels:
+    app: mysql-exporter
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9104"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9104
+    targetPort: 9104
+    protocol: TCP
+    name: metrics
+  selector:
+    app: mysql-exporter

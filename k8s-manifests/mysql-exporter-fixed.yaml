@@ -1,0 +1,101 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-exporter-secret
+  namespace: database
+type: Opaque
+stringData:
+  .my.cnf: |
+    [client]
+    user = porigins
+    password = 6DHq81M5PTFas0m2
+    host = mysql-service.database.svc.cluster.local
+    port = 3306
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-exporter
+  namespace: database
+  labels:
+    app: mysql-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-exporter
+  template:
+    metadata:
+      labels:
+        app: mysql-exporter
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9104"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: mysql-exporter
+        image: prom/mysqld-exporter:v0.15.1
+        ports:
+        - containerPort: 9104
+          name: metrics
+        volumeMounts:
+        - name: mysql-config
+          mountPath: /.my.cnf
+          subPath: .my.cnf
+          readOnly: true
+        args:
+        - "--collect.global_status"
+        - "--collect.global_variables"
+        - "--collect.info_schema.innodb_metrics"
+        - "--collect.info_schema.processlist"
+        - "--collect.info_schema.tables"
+        - "--collect.info_schema.tablestats"
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 9104
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 9104
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      volumes:
+      - name: mysql-config
+        secret:
+          secretName: mysql-exporter-secret
+          items:
+          - key: .my.cnf
+            path: .my.cnf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-exporter
+  namespace: database
+  labels:
+    app: mysql-exporter
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9104"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  ports:
+  - name: metrics
+    port: 9104
+    targetPort: 9104
+    protocol: TCP
+  selector:
+    app: mysql-exporter

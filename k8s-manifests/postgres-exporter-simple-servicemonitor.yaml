@@ -1,0 +1,20 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: postgres-exporter-simple
+  namespace: database
+  labels:
+    app: postgres-exporter-simple
+spec:
+  selector:
+    matchLabels:
+      app: postgres-exporter-simple
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+    - database
