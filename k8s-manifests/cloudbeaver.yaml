@@ -1,0 +1,167 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudbeaver-config
+  namespace: database
+data:
+  cloudbeaver.conf: |
+    {
+      "server": {
+        "serverPort": 8978,
+        "serverHost": "0.0.0.0",
+        "workspaceLocation": "/opt/cloudbeaver/workspace",
+        "contentRoot": "/opt/cloudbeaver/web",
+        "driversLocation": "/opt/cloudbeaver/drivers",
+        "developerMode": false,
+        "enableSecurityManager": false,
+        "expireSessionAfterPeriod": 1800000
+      },
+      "app": {
+        "anonymousAccessEnabled": true,
+        "anonymousUserRole": "user",
+        "supportsCustomConnections": true,
+        "publicCredentialsSaveEnabled": true,
+        "adminCredentialsSaveEnabled": true,
+        "enableReverseProxyAuth": false,
+        "disableDrivers": []
+      }
+    }
+  connections.json: |
+    {
+      "connections": {
+        "postgres": {
+          "name": "PostgreSQL",
+          "driverId": "postgresql",
+          "host": "postgres-service.database.svc.cluster.local",
+          "port": "5432",
+          "database": "postgres",
+          "user": "postgres",
+          "password": "postgres123",  // Development default - change in production
+          "autoCommit": true,
+          "showSystemObjects": false,
+          "showUtilityObjects": false
+        },
+        "mysql": {
+          "name": "MySQL",
+          "driverId": "mysql",
+          "host": "mysql-service.database.svc.cluster.local",
+          "port": "3306", 
+          "database": "sampledb",
+          "user": "dbuser",
+          "password": "rootpassword",
+          "autoCommit": true,
+          "showSystemObjects": false,
+          "showUtilityObjects": false
+        }
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudbeaver
+  namespace: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloudbeaver
+  template:
+    metadata:
+      labels:
+        app: cloudbeaver
+    spec:
+      containers:
+      - name: cloudbeaver
+        image: dbeaver/cloudbeaver:latest
+        ports:
+        - containerPort: 8978
+          name: http
+        env:
+        - name: CB_SERVER_NAME
+          value: "CloudBeaver Database Manager"
+        - name: CB_ADMIN_NAME
+          value: "admin"
+        - name: CB_ADMIN_PASSWORD
+          value: "adminpassword"  # Change this in production
+        - name: CLOUDBEAVER_WORKSPACE
+          value: "/opt/cloudbeaver/workspace"
+        - name: CLOUDBEAVER_WEB_CONFIG_PATH
+          value: "/opt/cloudbeaver/conf"
+        volumeMounts:
+        - name: cloudbeaver-config
+          mountPath: /opt/cloudbeaver/conf/cloudbeaver.conf
+          subPath: cloudbeaver.conf
+        - name: cloudbeaver-connections
+          mountPath: /opt/cloudbeaver/workspace/GlobalConfiguration/.dbeaver/data-sources.json
+          subPath: connections.json
+        - name: cloudbeaver-workspace
+          mountPath: /opt/cloudbeaver/workspace
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8978
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8978
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+      volumes:
+      - name: cloudbeaver-config
+        configMap:
+          name: cloudbeaver-config
+      - name: cloudbeaver-connections
+        configMap:
+          name: cloudbeaver-config
+          items:
+          - key: connections.json
+            path: connections.json
+      - name: cloudbeaver-workspace
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudbeaver-service
+  namespace: database
+spec:
+  selector:
+    app: cloudbeaver
+  ports:
+  - name: http
+    port: 8978
+    targetPort: 8978
+  type: ClusterIP
+---
+# HTTP Ingress for CloudBeaver
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cloudbeaver-ingress
+  namespace: database
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+  - host: cloudbeaver.localhost
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: cloudbeaver-service
+            port:
+              number: 8978

@@ -1,0 +1,297 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: development
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-init-script
+  namespace: development
+data:
+  init-mysql.sql: |
+    -- MySQL initialization script
+    
+    -- Create development database if it doesn't exist
+    CREATE DATABASE IF NOT EXISTS devdb_mysql;
+    
+    -- Create a sample table for testing
+    USE devdb_mysql;
+    
+    CREATE TABLE IF NOT EXISTS sample_data (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) UNIQUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    );
+    
+    -- Insert some sample data
+    INSERT IGNORE INTO sample_data (name, email) VALUES 
+        ('Admin User', 'admin@example.com'),
+        ('Test User', 'test@example.com'),
+        ('Developer', 'dev@example.com');
+    
+    -- Create an index for performance
+    CREATE INDEX IF NOT EXISTS idx_email ON sample_data(email);
+    
+    -- Grant privileges to the MySQL user
+    GRANT ALL PRIVILEGES ON devdb_mysql.* TO 'admin'@'%';
+    FLUSH PRIVILEGES;
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+  namespace: development
+type: Opaque
+data:
+  # admin / adminpass123
+  mysql-root-password: YWRtaW5wYXNzMTIz
+  mysql-password: YWRtaW5wYXNzMTIz
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: development
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: local-path
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: development
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        ports:
+        - containerPort: 3306
+          name: mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: mysql-root-password
+        - name: MYSQL_DATABASE
+          value: "devdb_mysql"
+        - name: MYSQL_USER
+          value: "admin"
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: mysql-password
+        volumeMounts:
+        - name: mysql-storage
+          mountPath: /var/lib/mysql
+        - name: mysql-init
+          mountPath: /docker-entrypoint-initdb.d
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - mysqladmin
+            - ping
+            - -h
+            - localhost
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          exec:
+            command:
+            - mysqladmin
+            - ping
+            - -h
+            - localhost
+          initialDelaySeconds: 5
+          periodSeconds: 2
+          timeoutSeconds: 1
+      volumes:
+      - name: mysql-storage
+        persistentVolumeClaim:
+          claimName: mysql-pvc
+      - name: mysql-init
+        configMap:
+          name: mysql-init-script
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: development
+spec:
+  selector:
+    app: mysql
+  ports:
+  - name: mysql
+    port: 3306
+    targetPort: 3306
+  type: ClusterIP
+  clusterIP: 172.30.50.11
+---
+# TCP Ingress for MySQL (external access)
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: mysql-tcp-ingress
+  namespace: development
+spec:
+  entryPoints:
+    - mysql-tcp
+  routes:
+  - match: HostSNI(`*`)
+    services:
+    - name: mysql
+      port: 3306
+---
+# CloudBeaver (Universal Database Tool) Web Interface
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudbeaver-config
+  namespace: development
+data:
+  cloudbeaver.conf: |
+    {
+      "server": {
+        "serverPort": 8978,
+        "serverHost": "0.0.0.0",
+        "workspaceLocation": "/opt/cloudbeaver/workspace",
+        "contentRoot": "/opt/cloudbeaver/web",
+        "driversLocation": "/opt/cloudbeaver/drivers",
+        "developerMode": false,
+        "enableSecurityManager": false,
+        "expireSessionAfterPeriod": 1800000
+      },
+      "app": {
+        "anonymousAccessEnabled": true,
+        "anonymousUserRole": "user",
+        "supportsCustomConnections": true,
+        "publicCredentialsSaveEnabled": true,
+        "adminCredentialsSaveEnabled": true,
+        "enableReverseProxyAuth": false,
+        "disableDrivers": []
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudbeaver
+  namespace: development
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloudbeaver
+  template:
+    metadata:
+      labels:
+        app: cloudbeaver
+    spec:
+      containers:
+      - name: cloudbeaver
+        image: dbeaver/cloudbeaver:latest
+        ports:
+        - containerPort: 8978
+          name: http
+        env:
+        - name: CB_SERVER_NAME
+          value: "CloudBeaver Development"
+        - name: CB_ADMIN_NAME
+          value: "admin"
+        - name: CB_ADMIN_PASSWORD
+          value: "adminpass123"
+        volumeMounts:
+        - name: cloudbeaver-config
+          mountPath: /opt/cloudbeaver/conf/cloudbeaver.conf
+          subPath: cloudbeaver.conf
+        - name: cloudbeaver-workspace
+          mountPath: /opt/cloudbeaver/workspace
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8978
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8978
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+      volumes:
+      - name: cloudbeaver-config
+        configMap:
+          name: cloudbeaver-config
+      - name: cloudbeaver-workspace
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudbeaver
+  namespace: development
+spec:
+  selector:
+    app: cloudbeaver
+  ports:
+  - name: http
+    port: 8978
+    targetPort: 8978
+  type: ClusterIP
+---
+# HTTP Ingress for CloudBeaver
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cloudbeaver-ingress
+  namespace: development
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+  - host: mysql.localhost
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: cloudbeaver
+            port:
+              number: 8978
