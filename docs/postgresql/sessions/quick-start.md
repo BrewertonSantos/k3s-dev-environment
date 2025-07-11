@@ -37,7 +37,7 @@ Get up and running with PostgreSQL in the K3s development environment. This sess
 
 1. **Connect to PostgreSQL directly from pod**:
    ```bash
-   kubectl exec -it -n development deployment/postgres -- psql -U admin -d devdb
+   kubectl exec -it -n development deployment/postgres -- psql -U admin -d {database}
    ```
 
 2. **Verify database connection**:
@@ -67,12 +67,12 @@ Get up and running with PostgreSQL in the K3s development environment. This sess
 
 2. **Test external connection** (if psql is installed locally):
    ```bash
-   PGPASSWORD=1q2w3e4r@123 psql -h localhost -p 5432 -U admin -d devdb
+   PGPASSWORD=1q2w3e4r@123 psql -h localhost -p 5432 -U admin -d {database}
    ```
 
 3. **Alternative: Test connection with kubectl**:
    ```bash
-   kubectl run psql-client --rm -it --image=postgres:15-alpine --restart=Never -- psql -h postgres.development.svc.cluster.local -U admin -d devdb
+   kubectl run psql-client --rm -it --image=postgres:15-alpine --restart=Never -- psql -h postgres.development.svc.cluster.local -U admin -d {database}
    ```
 
 ### Step 4: Basic Database Operations (3 minutes)
@@ -111,14 +111,14 @@ Get up and running with PostgreSQL in the K3s development environment. This sess
 1. **Test connection string format**:
    ```bash
    # Full connection string
-   postgresql://admin:1q2w3e4r@123@postgres.development.svc.cluster.local:5432/devdb
+   postgresql://admin:1q2w3e4r@123@postgres.development.svc.cluster.local:5432/{database}
    ```
 
 2. **Environment variables for applications**:
    ```bash
    export DB_HOST=postgres.development.svc.cluster.local
    export DB_PORT=5432
-   export DB_NAME=devdb
+   export DB_NAME={database}
    export DB_USER=admin
    export DB_PASSWORD=1q2w3e4r@123
    ```
@@ -133,7 +133,7 @@ Get up and running with PostgreSQL in the K3s development environment. This sess
    conn = psycopg2.connect(
        host='postgres.development.svc.cluster.local',
        port=5432,
-       database='devdb',
+       database='{database}',
        user='admin',
        password='1q2w3e4r@123'
    )
@@ -212,7 +212,7 @@ kubectl exec -n development deployment/postgres -- cat /var/lib/postgresql/data/
 kubectl exec -n development deployment/postgres -- psql -U admin -l
 
 # Check if database exists
-kubectl exec -n development deployment/postgres -- psql -U admin -c "SELECT datname FROM pg_database WHERE datname='devdb';"
+kubectl exec -n development deployment/postgres -- psql -U admin -c "SELECT datname FROM pg_database WHERE datname='{database}';"
 ```
 
 ## 📚 Next Steps
@@ -244,13 +244,13 @@ After completing this quick start:
 
 ```bash
 # Quick access commands
-alias pgpod="kubectl exec -it -n development deployment/postgres -- psql -U admin -d devdb"
+alias pgpod="kubectl exec -it -n development deployment/postgres -- psql -U admin -d {database}"
 alias pgforward="kubectl port-forward -n development svc/postgres 5432:5432"
 alias pgstatus="kubectl get pods -n development -l app=postgres"
 alias pglogs="kubectl logs -n development deployment/postgres -f"
 
 # Connection testing
 function test-pg() {
-    kubectl run pg-test --rm -it --image=postgres:15-alpine --restart=Never -- psql -h postgres.development.svc.cluster.local -U admin -d devdb -c "SELECT 'Connection successful!' as status;"
+    kubectl run pg-test --rm -it --image=postgres:15-alpine --restart=Never -- psql -h postgres.development.svc.cluster.local -U admin -d {database} -c "SELECT 'Connection successful!' as status;"
 }
 ```

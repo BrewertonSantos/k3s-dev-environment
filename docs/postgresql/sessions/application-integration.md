@@ -28,7 +28,7 @@ Learn how to properly integrate applications with PostgreSQL in the K3s developm
    data:
      DB_HOST: "postgres.development.svc.cluster.local"
      DB_PORT: "5432"
-     DB_NAME: "devdb"
+     DB_NAME: "{database}"
      DB_SSL_MODE: "disable"
      DB_MAX_CONNECTIONS: "20"
      DB_IDLE_CONNECTIONS: "5"
@@ -64,12 +64,12 @@ Learn how to properly integrate applications with PostgreSQL in the K3s developm
    # Environment variables approach
    export DB_HOST=postgres.development.svc.cluster.local
    export DB_PORT=5432
-   export DB_NAME=devdb
+   export DB_NAME={database}
    export DB_USER=admin
    export DB_PASSWORD=1q2w3e4r@123
 
    # Full connection string
-   export DATABASE_URL="postgresql://admin:1q2w3e4r@123@postgres.development.svc.cluster.local:5432/devdb?sslmode=disable"
+   export DATABASE_URL="postgresql://admin:1q2w3e4r@123@postgres.development.svc.cluster.local:5432/{database}?sslmode=disable"
 
    # Test connection
    kubectl run db-test --rm -it --image=postgres:15-alpine --restart=Never -- psql "$DATABASE_URL" -c "SELECT 'Connection successful!' as result;"
@@ -98,7 +98,7 @@ Learn how to properly integrate applications with PostgreSQL in the K3s developm
    const pool = new Pool({
      host: process.env.DB_HOST || 'postgres.development.svc.cluster.local',
      port: process.env.DB_PORT || 5432,
-     database: process.env.DB_NAME || 'devdb',
+     database: process.env.DB_NAME || '{database}',
      user: process.env.DB_USER || 'admin',
      password: process.env.DB_PASSWORD || '1q2w3e4r@123',
      max: parseInt(process.env.DB_MAX_CONNECTIONS) || 20,
@@ -207,7 +207,7 @@ Learn how to properly integrate applications with PostgreSQL in the K3s developm
    DB_CONFIG = {
        'host': os.getenv('DB_HOST', 'postgres.development.svc.cluster.local'),
        'port': os.getenv('DB_PORT', '5432'),
-       'database': os.getenv('DB_NAME', 'devdb'),
+       'database': os.getenv('DB_NAME', '{database}'),
        'user': os.getenv('DB_USER', 'admin'),
        'password': os.getenv('DB_PASSWORD', '1q2w3e4r@123')
    }
@@ -342,7 +342,7 @@ Learn how to properly integrate applications with PostgreSQL in the K3s developm
        port := getEnv("DB_PORT", "5432")
        user := getEnv("DB_USER", "admin")
        password := getEnv("DB_PASSWORD", "1q2w3e4r@123")
-       dbname := getEnv("DB_NAME", "devdb")
+       dbname := getEnv("DB_NAME", "{database}")
 
        psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
            host, port, user, password, dbname)
@@ -452,7 +452,7 @@ Learn how to properly integrate applications with PostgreSQL in the K3s developm
 1. **Create migration structure**:
    ```bash
    # Connect to PostgreSQL
-   kubectl exec -it -n development deployment/postgres -- psql -U admin -d devdb
+   kubectl exec -it -n development deployment/postgres -- psql -U admin -d {database}
    ```
 
    ```sql
@@ -547,7 +547,7 @@ Learn how to properly integrate applications with PostgreSQL in the K3s developm
    echo "Applying migration $MIGRATION_VERSION..."
    
    # Check if migration already applied
-   APPLIED=$(psql -U admin -d devdb -t -c "SELECT 1 FROM schema_migrations WHERE version = '$MIGRATION_VERSION'")
+   APPLIED=$(psql -U admin -d {database} -t -c "SELECT 1 FROM schema_migrations WHERE version = '$MIGRATION_VERSION'")
    
    if [ ! -z "$APPLIED" ]; then
        echo "Migration $MIGRATION_VERSION already applied"
@@ -555,7 +555,7 @@ Learn how to properly integrate applications with PostgreSQL in the K3s developm
    fi
    
    # Apply migration
-   psql -U admin -d devdb -f "$MIGRATION_FILE"
+   psql -U admin -d {database} -f "$MIGRATION_FILE"
    
    if [ $? -eq 0 ]; then
        echo "Migration $MIGRATION_VERSION applied successfully"
@@ -620,7 +620,7 @@ Learn how to properly integrate applications with PostgreSQL in the K3s developm
        state,
        count(*) as connection_count
    FROM pg_stat_activity 
-   WHERE datname = 'devdb'
+   WHERE datname = '{database}'
    GROUP BY application_name, client_addr, state
    ORDER BY connection_count DESC;
 
@@ -632,7 +632,7 @@ Learn how to properly integrate applications with PostgreSQL in the K3s developm
        round(numbackends::float / setting::int * 100, 2) as connection_utilization
    FROM pg_stat_database psd
    JOIN pg_settings ps ON ps.name = 'max_connections'
-   WHERE datname = 'devdb';
+   WHERE datname = '{database}';
    ```
 
 #### External Connection Pooling with PgBouncer
@@ -648,7 +648,7 @@ Learn how to properly integrate applications with PostgreSQL in the K3s developm
    data:
      pgbouncer.ini: |
        [databases]
-       devdb = host=postgres port=5432 dbname=devdb
+       {database} = host=postgres port=5432 dbname={database}
        
        [pgbouncer]
        listen_addr = 0.0.0.0
@@ -721,7 +721,7 @@ Learn how to properly integrate applications with PostgreSQL in the K3s developm
    kubectl apply -f pgbouncer.yaml
 
    # Test connection through PgBouncer
-   kubectl run pgbouncer-test --rm -it --image=postgres:15-alpine --restart=Never -- psql -h pgbouncer.development.svc.cluster.local -p 6432 -U admin -d devdb
+   kubectl run pgbouncer-test --rm -it --image=postgres:15-alpine --restart=Never -- psql -h pgbouncer.development.svc.cluster.local -p 6432 -U admin -d {database}
 
    # Monitor PgBouncer stats
    kubectl exec -it -n development deployment/pgbouncer -- psql -h localhost -p 6432 -U admin pgbouncer -c "SHOW STATS;"
@@ -735,12 +735,12 @@ Learn how to properly integrate applications with PostgreSQL in the K3s developm
 1. **Create test database setup**:
    ```sql
    -- Connect to PostgreSQL
-   CREATE DATABASE test_devdb;
+   CREATE DATABASE test_{database};
    CREATE USER test_user WITH PASSWORD 'test_password';
-   GRANT ALL PRIVILEGES ON DATABASE test_devdb TO test_user;
+   GRANT ALL PRIVILEGES ON DATABASE test_{database} TO test_user;
 
    -- Switch to test database
-   \c test_devdb
+   \c test_{database}
 
    -- Create test schema
    CREATE SCHEMA test_data;
@@ -768,7 +768,7 @@ Learn how to properly integrate applications with PostgreSQL in the K3s developm
    cat > /usr/local/bin/seed-db.sh << 'EOF'
    #!/bin/bash
    
-   DATABASE=${1:-devdb}
+   DATABASE=${1:-{database}}
    
    echo "Seeding database: $DATABASE"
    
@@ -807,7 +807,7 @@ Learn how to properly integrate applications with PostgreSQL in the K3s developm
    kubectl exec -n development deployment/postgres -- /usr/local/bin/seed-db.sh
 
    # Verify seeded data
-   kubectl exec -n development deployment/postgres -- psql -U admin -d devdb -c "SELECT count(*) as user_count FROM users;"
+   kubectl exec -n development deployment/postgres -- psql -U admin -d {database} -c "SELECT count(*) as user_count FROM users;"
    ```
 
 #### Development Environment Management
@@ -821,11 +821,11 @@ Learn how to properly integrate applications with PostgreSQL in the K3s developm
    echo "Resetting development database..."
    
    # Drop and recreate database
-   kubectl exec -n development deployment/postgres -- psql -U admin -c "DROP DATABASE IF EXISTS devdb;"
-   kubectl exec -n development deployment/postgres -- psql -U admin -c "CREATE DATABASE devdb;"
+   kubectl exec -n development deployment/postgres -- psql -U admin -c "DROP DATABASE IF EXISTS {database};"
+   kubectl exec -n development deployment/postgres -- psql -U admin -c "CREATE DATABASE {database};"
    
    # Run migrations
-   kubectl exec -n development deployment/postgres -- psql -U admin -d devdb << 'SQL'
+   kubectl exec -n development deployment/postgres -- psql -U admin -d {database} << 'SQL'
    -- Recreate users table
    CREATE TABLE users (
        id SERIAL PRIMARY KEY,
@@ -893,7 +893,7 @@ Learn how to properly integrate applications with PostgreSQL in the K3s developm
    BACKUP_NAME="dev-backup-$(date +%Y%m%d-%H%M%S)"
    
    echo "Creating backup: $BACKUP_NAME"
-   kubectl exec -n development deployment/postgres -- pg_dump -U admin devdb > "$BACKUP_NAME.sql"
+   kubectl exec -n development deployment/postgres -- pg_dump -U admin {database} > "$BACKUP_NAME.sql"
    echo "Backup saved as: $BACKUP_NAME.sql"
    EOF
 
@@ -908,7 +908,7 @@ Learn how to properly integrate applications with PostgreSQL in the K3s developm
    fi
    
    echo "Restoring from: $BACKUP_FILE"
-   kubectl exec -i -n development deployment/postgres -- psql -U admin devdb < "$BACKUP_FILE"
+   kubectl exec -i -n development deployment/postgres -- psql -U admin {database} < "$BACKUP_FILE"
    echo "Restore complete!"
    EOF
 
@@ -935,10 +935,10 @@ After completing this session, you should be able to:
 kubectl run app-connectivity-test --rm -it --image=postgres:15-alpine --restart=Never -- /bin/bash
 
 # Inside the test pod
-psql -h postgres.development.svc.cluster.local -U admin -d devdb -c "SELECT 'Connection works!' as result;"
+psql -h postgres.development.svc.cluster.local -U admin -d {database} -c "SELECT 'Connection works!' as result;"
 
 # Test with different connection parameters
-PGCONNECT_TIMEOUT=10 psql -h postgres.development.svc.cluster.local -U admin -d devdb
+PGCONNECT_TIMEOUT=10 psql -h postgres.development.svc.cluster.local -U admin -d {database}
 ```
 
 ### Application Configuration Issues
@@ -964,7 +964,7 @@ SELECT
     count(*) as connections,
     max(backend_start) as oldest_connection
 FROM pg_stat_activity 
-WHERE datname = 'devdb'
+WHERE datname = '{database}'
 GROUP BY application_name;
 
 -- Check for connection leaks
@@ -973,7 +973,7 @@ SELECT
     count(*) as connection_count,
     max(state_change) as last_state_change
 FROM pg_stat_activity 
-WHERE datname = 'devdb'
+WHERE datname = '{database}'
 GROUP BY state;
 
 -- Monitor slow queries from applications
@@ -982,7 +982,7 @@ SELECT
     state,
     now() - query_start as duration
 FROM pg_stat_activity 
-WHERE datname = 'devdb' 
+WHERE datname = '{database}' 
 AND state = 'active'
 AND now() - query_start > interval '1 second';
 ```
@@ -1017,17 +1017,17 @@ After completing this integration session:
 
 ```bash
 # Create development aliases
-alias db-connect="kubectl exec -it -n development deployment/postgres -- psql -U admin -d devdb"
+alias db-connect="kubectl exec -it -n development deployment/postgres -- psql -U admin -d {database}"
 alias db-reset="./reset-dev-db.sh"
 alias db-seed="kubectl exec -n development deployment/postgres -- /usr/local/bin/seed-db.sh"
 alias db-backup="./backup-dev-db.sh"
-alias db-stats="kubectl exec -n development deployment/postgres -- psql -U admin -d devdb -c \"SELECT * FROM pg_stat_activity WHERE datname = 'devdb';\""
+alias db-stats="kubectl exec -n development deployment/postgres -- psql -U admin -d {database} -c \"SELECT * FROM pg_stat_activity WHERE datname = '{database}';\""
 
 # Environment setup function
 function setup-db-env() {
     export DB_HOST=postgres.development.svc.cluster.local
     export DB_PORT=5432
-    export DB_NAME=devdb
+    export DB_NAME={database}
     export DB_USER=admin
     export DB_PASSWORD=1q2w3e4r@123
     echo "Database environment variables set"

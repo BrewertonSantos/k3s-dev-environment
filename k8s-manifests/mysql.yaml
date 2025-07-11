@@ -77,6 +77,10 @@ spec:
     metadata:
       labels:
         app: mysql
+      annotations:
+        prometheus.io/scrape: "false"  # MySQL metrics will be scraped via mysql-exporter
+        prometheus.io/port: "3306"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
       - name: mysql

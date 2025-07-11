@@ -142,7 +142,7 @@ nc -zv 127.0.0.1 5432
 telnet 127.0.0.1 5432
 
 # Test PostgreSQL connection (requires psql)
-PGPASSWORD=1q2w3e4r@123 psql -h 127.0.0.1 -p 5432 -U admin -d devdb -c "SELECT version();"
+PGPASSWORD=1q2w3e4r@123 psql -h 127.0.0.1 -p 5432 -U admin -d {database} -c "SELECT version();"
 ```
 
 ## 📋 Testing Checklist
@@ -215,7 +215,7 @@ kubectl get endpoints -n development postgres
 
 ```bash
 # Test from inside cluster
-kubectl run test-connection --rm -it --image=postgres:15-alpine -- psql -h postgres.development.svc.cluster.local -U admin -d devdb
+kubectl run test-connection --rm -it --image=postgres:15-alpine -- psql -h postgres.development.svc.cluster.local -U admin -d {database}
 
 # Check iptables rules (on host)
 sudo iptables -L -n | grep 5432
@@ -237,7 +237,7 @@ const { Pool } = require('pg');
 const pool = new Pool({
   host: '127.0.0.1',
   port: 5432,
-  database: 'devdb',
+  database: '{database}',
   user: 'admin',
   password: '1q2w3e4r@123',
   max: 10,                    // Maximum pool size
@@ -250,7 +250,7 @@ const pool = new Pool({
 
 ```bash
 # Monitor connection count
-PGPASSWORD=1q2w3e4r@123 psql -h 127.0.0.1 -p 5432 -U admin -d devdb -c "
+PGPASSWORD=1q2w3e4r@123 psql -h 127.0.0.1 -p 5432 -U admin -d {database} -c "
 SELECT 
     datname,
     count(*) as connections,
@@ -340,7 +340,7 @@ SELECT
     tup_updated,
     tup_deleted
 FROM pg_stat_database
-WHERE datname = 'devdb';
+WHERE datname = '{database}';
 
 -- Long running queries
 SELECT 
@@ -356,7 +356,7 @@ WHERE (now() - pg_stat_activity.query_start) > interval '5 minutes';
 
 You have successfully configured Traefik TCP Ingress for PostgreSQL when:
 
-1. ✅ You can connect using: `psql -h 127.0.0.1 -p 5432 -U admin -d devdb`
+1. ✅ You can connect using: `psql -h 127.0.0.1 -p 5432 -U admin -d {database}`
 2. ✅ No `kubectl port-forward` is required
 3. ✅ Database operations (SELECT, INSERT, UPDATE, DELETE) work correctly
 4. ✅ Multiple concurrent connections work properly

@@ -62,7 +62,7 @@ data:
           "Group": "Servers",
           "Host": "postgres.development.svc.cluster.local",
           "Port": 5432,
-          "MaintenanceDB": "devdb",
+          "MaintenanceDB": "{database}",
           "Username": "admin",
           "SSLMode": "prefer"
         }
@@ -289,7 +289,7 @@ echo "Password: 1q2w3e4r@123"
 1. **Select Database**: Right-click on target database
 2. **Backup**: Select "Backup..."
 3. **General Tab**:
-   - Filename: `devdb_backup_$(date).sql`
+   - Filename: `{database}_backup_$(date).sql`
    - Format: `Plain`
    - Compression: `None`
 4. **Dump Options Tab**:
@@ -457,7 +457,7 @@ kubectl exec -it -n development deployment/pgadmin -- ping postgres.development.
 kubectl exec -it -n development deployment/pgadmin -- nc -zv postgres.development.svc.cluster.local 5432
 
 # Verify PostgreSQL credentials
-kubectl exec -it -n development deployment/postgres -- psql -U admin -d devdb -c "SELECT current_user;"
+kubectl exec -it -n development deployment/postgres -- psql -U admin -d {database} -c "SELECT current_user;"
 ```
 
 #### 3. Performance Issues

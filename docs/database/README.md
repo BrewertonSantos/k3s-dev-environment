@@ -145,8 +145,8 @@ MySQL deployment automatically generates secure credentials:
 ~/.kube/database-credentials/mysql.txt
 
 # File format:
-Database: porigins_db
-User: porigins
+Database: {database}
+User: {user}
 Password: <16-character-random>
 Root Password: <20-character-random>
 Service: mysql-service.database.svc.cluster.local:3306
@@ -215,8 +215,8 @@ CloudBeaver comes with pre-configured connections:
 #### MySQL Connection
 - **Host**: `mysql-service.database.svc.cluster.local`
 - **Port**: `3306`
-- **Database**: `porigins_db`
-- **User**: `porigins`
+- **Database**: `{database}`
+- **User**: `{user}`
 - **Password**: *(from credentials file)*
 
 #### PostgreSQL Connection  
@@ -348,8 +348,8 @@ kubectl get endpoints -n database
 ```yaml
 spring:
   datasource:
-    url: jdbc:mysql://mysql-service.database.svc.cluster.local:3306/porigins_db
-    username: porigins
+    url: jdbc:mysql://mysql-service.database.svc.cluster.local:3306/{database}
+    username: {user}
     password: ${MYSQL_PASSWORD}  # From environment or config
 ```
 
@@ -372,8 +372,8 @@ const pool = new Pool({
 # MySQL connection
 export MYSQL_HOST=mysql-service.database.svc.cluster.local
 export MYSQL_PORT=3306
-export MYSQL_DATABASE=porigins_db
-export MYSQL_USER=porigins
+export MYSQL_DATABASE={database}
+export MYSQL_USER={user}
 export MYSQL_PASSWORD=$(grep "Password:" ~/.kube/database-credentials/mysql.txt | awk '{print $2}')
 
 # PostgreSQL connection

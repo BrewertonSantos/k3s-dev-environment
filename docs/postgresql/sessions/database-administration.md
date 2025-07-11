@@ -20,14 +20,14 @@ Learn advanced PostgreSQL administration tasks in the K3s environment including 
 
 1. **Connect to PostgreSQL as admin**:
    ```bash
-   kubectl exec -it -n development deployment/postgres -- psql -U admin -d devdb
+   kubectl exec -it -n development deployment/postgres -- psql -U admin -d {database}
    ```
 
 2. **Create application-specific users**:
    ```sql
    -- Create read-write application user
    CREATE USER app_user WITH PASSWORD 'app_secure_pass_123';
-   GRANT CONNECT ON DATABASE devdb TO app_user;
+   GRANT CONNECT ON DATABASE {database} TO app_user;
    GRANT USAGE ON SCHEMA public TO app_user;
    GRANT CREATE ON SCHEMA public TO app_user;
    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;
@@ -35,13 +35,13 @@ Learn advanced PostgreSQL administration tasks in the K3s environment including 
 
    -- Create read-only user for reporting
    CREATE USER readonly_user WITH PASSWORD 'readonly_pass_123';
-   GRANT CONNECT ON DATABASE devdb TO readonly_user;
+   GRANT CONNECT ON DATABASE {database} TO readonly_user;
    GRANT USAGE ON SCHEMA public TO readonly_user;
    GRANT SELECT ON ALL TABLES IN SCHEMA public TO readonly_user;
 
    -- Create monitoring user
    CREATE USER monitor_user WITH PASSWORD 'monitor_pass_123';
-   GRANT CONNECT ON DATABASE devdb TO monitor_user;
+   GRANT CONNECT ON DATABASE {database} TO monitor_user;
    GRANT SELECT ON pg_stat_database, pg_stat_activity TO monitor_user;
    ```
 
@@ -67,9 +67,9 @@ Learn advanced PostgreSQL administration tasks in the K3s environment including 
    \z
    
    -- Test user connection
-   \c devdb app_user
+   \c {database} app_user
    SELECT current_user, current_database();
-   \c devdb admin
+   \c {database} admin
    ```
 
 #### Schema Management
@@ -104,19 +104,19 @@ Learn advanced PostgreSQL administration tasks in the K3s environment including 
 2. **Logical backup with pg_dump**:
    ```bash
    # Full database backup
-   kubectl exec -n development deployment/postgres -- pg_dump -U admin devdb > ~/postgres-backups/devdb_full_$(date +%Y%m%d_%H%M%S).sql
+   kubectl exec -n development deployment/postgres -- pg_dump -U admin {database} > ~/postgres-backups/{database}_full_$(date +%Y%m%d_%H%M%S).sql
 
    # Compressed backup
-   kubectl exec -n development deployment/postgres -- pg_dump -U admin -Fc devdb > ~/postgres-backups/devdb_compressed_$(date +%Y%m%d_%H%M%S).dump
+   kubectl exec -n development deployment/postgres -- pg_dump -U admin -Fc {database} > ~/postgres-backups/{database}_compressed_$(date +%Y%m%d_%H%M%S).dump
 
    # Schema-only backup
-   kubectl exec -n development deployment/postgres -- pg_dump -U admin -s devdb > ~/postgres-backups/devdb_schema_$(date +%Y%m%d_%H%M%S).sql
+   kubectl exec -n development deployment/postgres -- pg_dump -U admin -s {database} > ~/postgres-backups/{database}_schema_$(date +%Y%m%d_%H%M%S).sql
 
    # Data-only backup
-   kubectl exec -n development deployment/postgres -- pg_dump -U admin -a devdb > ~/postgres-backups/devdb_data_$(date +%Y%m%d_%H%M%S).sql
+   kubectl exec -n development deployment/postgres -- pg_dump -U admin -a {database} > ~/postgres-backups/{database}_data_$(date +%Y%m%d_%H%M%S).sql
 
    # Specific table backup
-   kubectl exec -n development deployment/postgres -- pg_dump -U admin -t users devdb > ~/postgres-backups/users_table_$(date +%Y%m%d_%H%M%S).sql
+   kubectl exec -n development deployment/postgres -- pg_dump -U admin -t users {database} > ~/postgres-backups/users_table_$(date +%Y%m%d_%H%M%S).sql
    ```
 
 3. **All databases backup**:
@@ -135,10 +135,10 @@ Learn advanced PostgreSQL administration tasks in the K3s environment including 
 
    ```bash
    # Restore to test database
-   kubectl exec -i -n development deployment/postgres -- psql -U admin test_restore < ~/postgres-backups/devdb_full_*.sql
+   kubectl exec -i -n development deployment/postgres -- psql -U admin test_restore < ~/postgres-backups/{database}_full_*.sql
 
    # Restore from compressed backup
-   kubectl exec -i -n development deployment/postgres -- pg_restore -U admin -d test_restore ~/postgres-backups/devdb_compressed_*.dump
+   kubectl exec -i -n development deployment/postgres -- pg_restore -U admin -d test_restore ~/postgres-backups/{database}_compressed_*.dump
    ```
 
 5. **Point-in-time recovery simulation**:
@@ -166,12 +166,12 @@ Learn advanced PostgreSQL administration tasks in the K3s environment including 
    mkdir -p $BACKUP_DIR
    
    # Full backup
-   pg_dump -U admin devdb | gzip > $BACKUP_DIR/devdb_$TIMESTAMP.sql.gz
+   pg_dump -U admin {database} | gzip > $BACKUP_DIR/{database}_$TIMESTAMP.sql.gz
    
    # Keep only last 7 days
    find $BACKUP_DIR -name "*.sql.gz" -mtime +7 -delete
    
-   echo "Backup completed: devdb_$TIMESTAMP.sql.gz"
+   echo "Backup completed: {database}_$TIMESTAMP.sql.gz"
    EOF
 
    chmod +x /usr/local/bin/backup-db.sh
@@ -290,7 +290,7 @@ Learn advanced PostgreSQL administration tasks in the K3s environment including 
        datname,
        round(blks_hit::float/(blks_hit + blks_read) * 100, 2) as cache_hit_ratio
    FROM pg_stat_database
-   WHERE datname = 'devdb';
+   WHERE datname = '{database}';
    ```
 
 5. **Lock monitoring**:
@@ -479,7 +479,7 @@ Learn advanced PostgreSQL administration tasks in the K3s environment including 
        datname,
        datacl
    FROM pg_database
-   WHERE datname = 'devdb';
+   WHERE datname = '{database}';
 
    -- Table privileges for specific user
    SELECT 
@@ -506,7 +506,7 @@ Learn advanced PostgreSQL administration tasks in the K3s environment including 
    ```sql
    -- Remove default public schema privileges
    REVOKE CREATE ON SCHEMA public FROM PUBLIC;
-   REVOKE ALL ON DATABASE devdb FROM PUBLIC;
+   REVOKE ALL ON DATABASE {database} FROM PUBLIC;
 
    -- Create security monitoring view
    CREATE OR REPLACE VIEW security_audit AS
@@ -620,16 +620,16 @@ After completing this administration session:
 
 ```bash
 # Create aliases for common operations
-alias pgadmin="kubectl exec -it -n development deployment/postgres -- psql -U admin -d devdb"
-alias pgbackup="kubectl exec -n development deployment/postgres -- pg_dump -U admin devdb"
-alias pgstats="kubectl exec -n development deployment/postgres -- psql -U admin -d devdb -c \"SELECT * FROM pg_stat_activity WHERE state = 'active';\""
-alias pgsize="kubectl exec -n development deployment/postgres -- psql -U admin -d devdb -c \"SELECT pg_size_pretty(pg_database_size('devdb'));\""
+alias pgadmin="kubectl exec -it -n development deployment/postgres -- psql -U admin -d {database}"
+alias pgbackup="kubectl exec -n development deployment/postgres -- pg_dump -U admin {database}"
+alias pgstats="kubectl exec -n development deployment/postgres -- psql -U admin -d {database} -c \"SELECT * FROM pg_stat_activity WHERE state = 'active';\""
+alias pgsize="kubectl exec -n development deployment/postgres -- psql -U admin -d {database} -c \"SELECT pg_size_pretty(pg_database_size('{database}'));\""
 
 # Monitoring script
 function pg-health() {
     echo "=== PostgreSQL Health Check ==="
     kubectl exec -n development deployment/postgres -- pg_isready -U admin
-    kubectl exec -n development deployment/postgres -- psql -U admin -d devdb -c "SELECT count(*) as active_connections FROM pg_stat_activity WHERE state = 'active';"
-    kubectl exec -n development deployment/postgres -- psql -U admin -d devdb -c "SELECT pg_size_pretty(pg_database_size('devdb')) as database_size;"
+    kubectl exec -n development deployment/postgres -- psql -U admin -d {database} -c "SELECT count(*) as active_connections FROM pg_stat_activity WHERE state = 'active';"
+    kubectl exec -n development deployment/postgres -- psql -U admin -d {database} -c "SELECT pg_size_pretty(pg_database_size('{database}')) as database_size;"
 }
 ```

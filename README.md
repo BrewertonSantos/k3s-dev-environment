@@ -14,7 +14,26 @@
 [![GitFlow](https://img.shields.io/badge/GitFlow-Enabled-blue.svg)](https://nvie.com/posts/a-successful-git-branching-model/)
 [![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
-A complete development environment using **Kubernetes (K3s)** with all services running as native Kubernetes deployments. This environment provides monitoring, storage, databases, and management tools for modern application development.
+A **production-ready development environment** using **Kubernetes (K3s)** with comprehensive observability stack. Features complete database monitoring, metrics collection, log analytics, and GitOps deployment automation.
+
+## 🎯 Quick Access Dashboard
+
+| Service | URL | Purpose | Status |
+|---------|-----|---------|--------|
+| **Grafana** | http://grafana.localhost | Monitoring & Dashboards | ✅ Complete Database Monitoring |
+| **Prometheus** | http://prometheus.localhost | Metrics Collection | ✅ 30+ Metrics Available |
+| **AlertManager** | http://alertmanager.localhost | Alert Management | ✅ Database & System Alerts |
+| **OpenSearch** | http://opensearch.localhost | Log Analytics | ✅ Centralized Logging |
+| **OpenSearch Dashboards** | http://opensearch-dashboards.localhost | Log Visualization | ✅ Kibana-compatible |
+| **CloudBeaver** | http://cloudbeaver.localhost | Database Management | ✅ PostgreSQL & MySQL |
+
+## 📊 Observability Features
+
+- **🔍 Complete Database Monitoring**: PostgreSQL & MySQL exporters with 30+ metrics
+- **📈 Real-time Dashboards**: Pre-built Grafana dashboards for databases and Kubernetes
+- **🚨 Intelligent Alerting**: Automated alerts for performance thresholds and failures
+- **📋 Centralized Logging**: OpenSearch with full-text search and analytics
+- **🎯 Multiple Data Sources**: Prometheus, direct database access, and log correlation
 
 ## 🚀 Quick Start
 
@@ -220,67 +239,46 @@ graph TB
 - **📋 Project Overview**: [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) - Architecture and features
 - **🏗️ Architecture**: `docs/architecture/README.md` - System design and diagrams
 - **📊 Service Guides**: `docs/[service-name]/README.md` - Individual service documentation
+- **📚 Complete Documentation**
 
-## 🔍 Service Details
+### 🔥 **NEW: Complete Observability Stack**
+> **[📖 Observability Stack Documentation](docs/OBSERVABILITY_STACK_COMPLETE.md)** - Complete guide with architecture diagrams, deployment instructions, and troubleshooting
 
-### Monitoring and Observability
+### Database Monitoring Infrastructure
+> **[📊 Database Monitoring Guide](docs/DATABASE_MONITORING_INFRASTRUCTURE.md)** - PostgreSQL & MySQL monitoring with Prometheus exporters, custom dashboards, and alerting rules
 
-#### Prometheus
-- **URL**: http://prometheus.localhost (or localhost:9090)
-- **Function**: Metrics collection and storage
-- **Targets**: Kubernetes services and pods
-- **Storage**: Persistent volume for data retention
+### Architecture & Implementation
+- **[🏗️ DNS & Ingress Configuration](docs/DNS_INGRESS_CONFIGURATION.md)** - Traefik routing and local DNS setup
+- **[🎯 Git Workflow Guide](docs/GIT_WORKFLOW.md)** - Development best practices and contribution guidelines
 
-#### Grafana
-- **URL**: http://grafana.localhost (or localhost:3000)
-- **Login**: admin/admin123
-- **Datasource**: Pre-configured Prometheus connection
-- **Dashboards**: Kubernetes cluster monitoring included
+### Service-Specific Documentation
+- **[📈 Grafana Setup](docs/grafana/)** - Dashboard configuration and data source setup  
+- **[🔍 Prometheus Configuration](docs/prometheus/)** - Metrics collection and alerting rules
+- **[🗄️ Database Guides](docs/database/)** - PostgreSQL, MySQL, and CloudBeaver setup
+- **[🚦 Traefik Configuration](docs/traefik/)** - Ingress controller and routing setup
 
-#### Jaeger
-- **URL**: http://jaeger.localhost (or localhost:16686)
-- **Function**: Distributed tracing for microservices
-- **Storage**: In-memory (development mode)
+## 🎯 Monitoring Capabilities
 
-### Storage and Data
+### Database Metrics (Auto-discovered)
+- **PostgreSQL**: Database size, connections, transactions, locks, query performance
+- **MySQL**: Uptime, connections, queries, InnoDB statistics, table analytics
+- **CloudBeaver**: Health monitoring and usage statistics
 
-#### MinIO
-- **Console**: http://minio.localhost (or localhost:9001)
-- **API**: http://minio-api.localhost (or localhost:9000)
-- **Login**: minioadmin/minioadmin123
-- **Function**: S3-compatible object storage
-- **Storage**: Persistent volume for data retention
+### System Metrics (Built-in)
+- **Kubernetes**: Pod status, resource usage, node metrics, cluster health
+- **Node Exporter**: System metrics (CPU, memory, disk, network)
+- **kube-state-metrics**: Kubernetes object state and metadata
 
-#### PostgreSQL
-- **Host**: localhost:5432
-- **Database**: devdb
-- **User**: admin
-- **Password**: admin123
-- **Function**: Primary application database
+### Pre-built Dashboards
+- **PostgreSQL Overview**: Connection analysis, transaction rates, lock monitoring
+- **MySQL Performance**: Query statistics, InnoDB metrics, connection tracking  
+- **Kubernetes Cluster**: Resource utilization, pod lifecycle, namespace overview
+- **System Health**: Node status, disk usage, network performance
 
-#### Redis
-- **Host**: localhost:6379
-- **Function**: Caching and session storage
-- **Storage**: Persistent volume for snapshots
-
-### Management and Networking
-
-#### Traefik
-- **Dashboard**: http://traefik.localhost (or localhost:8888)
-- **Function**: Ingress controller and load balancer
-- **Features**: Automatic service discovery, SSL termination ready
-
-#### Rancher
-- **URL**: http://rancher.localhost (or https://localhost:8443)
-- **Login**: admin/admin123
-- **Function**: Kubernetes cluster management and monitoring
-- **Features**: Workload management, resource monitoring
-
-#### ArgoCD
-- **URL**: http://argocd.localhost (or localhost:8080)
-- **Login**: admin/admin123
-- **Function**: GitOps continuous delivery platform
-- **Features**: Application deployment, Git-based workflows, multi-environment management
+### Intelligent Alerting
+- **Database Alerts**: Connection limits, slow queries, lock contentions
+- **System Alerts**: High resource usage, pod failures, disk space warnings
+- **Custom Rules**: Configurable thresholds for application-specific metrics
 
 ## � Data Persistence
 
