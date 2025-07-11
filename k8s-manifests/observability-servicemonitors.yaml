@@ -1,0 +1,40 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: opensearch-monitor
+  namespace: logging
+  labels:
+    app: opensearch
+spec:
+  selector:
+    matchLabels:
+      app: opensearch
+  endpoints:
+  - port: http
+    path: /_prometheus/metrics
+    interval: 30s
+    scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+    - logging
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: grafana-monitor
+  namespace: development
+  labels:
+    app.kubernetes.io/name: grafana
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: grafana
+  endpoints:
+  - port: http-web
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+    - development

@@ -1,0 +1,75 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: development
+  labels:
+    grafana_datasource: "1"
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      access: proxy
+      url: http://kube-prometheus-prometheus.development.svc.cluster.local:9090
+      isDefault: true
+      editable: false
+      jsonData:
+        httpMethod: POST
+        manageAlerts: true
+        prometheusType: Prometheus
+        prometheusVersion: 2.47.0
+        cacheLevel: 'High'
+        disableRecordingRules: false
+        incrementalQueryOverlapWindow: 10m
+        
+    - name: PostgreSQL
+      type: postgres
+      access: proxy
+      url: postgres.database.svc.cluster.local:5432
+      database: devdb
+      user: admin
+      secureJsonData:
+        password: "1q2w3e4r@123"
+      jsonData:
+        sslmode: "disable"
+        maxOpenConns: 10
+        maxIdleConns: 2
+        connMaxLifetime: 14400
+        postgresVersion: 1500
+        timescaledb: false
+        
+    - name: MySQL
+      type: mysql
+      access: proxy
+      url: mysql-service.database.svc.cluster.local:3306
+      database: porigins
+      user: porigins
+      secureJsonData:
+        password: "6DHq81M5PTFas0m2"
+      jsonData:
+        maxOpenConns: 10
+        maxIdleConns: 2
+        connMaxLifetime: 14400
+        
+    - name: OpenSearch
+      type: opensearch
+      access: proxy
+      url: http://opensearch-service.logging.svc.cluster.local:9200
+      database: "*"
+      jsonData:
+        timeField: "@timestamp"
+        esVersion: "2.11.0"
+        includeFrozen: false
+        logMessageField: "message"
+        logLevelField: "level"
+        maxConcurrentShardRequests: 5
+        
+    - name: AlertManager
+      type: alertmanager
+      access: proxy
+      url: http://kube-prometheus-alertmanager.development.svc.cluster.local:9093
+      jsonData:
+        implementation: prometheus
