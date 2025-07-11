@@ -3,11 +3,45 @@ kind: Namespace
 metadata:
   name: development
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-script
+  namespace: database
+data:
+  init-pgvector.sh: |
+    #!/bin/bash
+    # PostgreSQL initialization script for pgvector
+    
+    set -e
+    
+    # Create the vector extension
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+        -- Create pgvector extension
+        CREATE EXTENSION IF NOT EXISTS vector;
+        
+        -- Create the vector table for dev-indexer if it doesn't exist
+        CREATE TABLE IF NOT EXISTS dev_directory_vectors (
+            id TEXT PRIMARY KEY,
+            content TEXT,
+            metadata JSONB,
+            embedding VECTOR(384)  -- HuggingFace all-MiniLM-L6-v2 dimension
+        );
+        
+        -- Create index for faster similarity search
+        CREATE INDEX IF NOT EXISTS dev_directory_vectors_embedding_idx 
+        ON dev_directory_vectors 
+        USING ivfflat (embedding vector_cosine_ops);
+        
+        -- Grant permissions
+        GRANT ALL PRIVILEGES ON TABLE dev_directory_vectors TO \$POSTGRES_USER;
+    EOSQL
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres
-  namespace: development
+  namespace: database
 spec:
   replicas: 1
   selector:
@@ -20,7 +54,7 @@ spec:
     spec:
       containers:
       - name: postgres
-        image: postgres:15-alpine
+        image: pgvector/pgvector:pg15
         env:
         - name: POSTGRES_USER
           value: "admin"
@@ -33,16 +67,30 @@ spec:
         volumeMounts:
         - name: postgres-storage
           mountPath: /var/lib/postgresql/data
+        - name: init-script
+          mountPath: /docker-entrypoint-initdb.d/init-pgvector.sh
+          subPath: init-pgvector.sh
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
       volumes:
       - name: postgres-storage
         persistentVolumeClaim:
           claimName: postgres-pvc
+      - name: init-script
+        configMap:
+          name: postgres-init-script
+          defaultMode: 0755
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: postgres
-  namespace: development
+  namespace: database
 spec:
   selector:
     app: postgres
@@ -55,7 +103,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: postgres-pvc
-  namespace: development
+  namespace: database
 spec:
   accessModes:
     - ReadWriteOnce
