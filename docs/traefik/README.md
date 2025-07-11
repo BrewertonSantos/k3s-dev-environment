@@ -230,7 +230,7 @@ spec:
 
 ```bash
 # Connect directly to PostgreSQL via Traefik
-psql -h 127.0.0.1 -p 5432 -U admin -d devdb
+psql -h 127.0.0.1 -p 5432 -U admin -d {database}
 
 # No kubectl port-forward required!
 ```

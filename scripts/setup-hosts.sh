@@ -20,7 +20,10 @@ HOSTS_ENTRIES="
 127.0.0.1 minio.localhost
 127.0.0.1 minio-api.localhost
 127.0.0.1 rancher.localhost
-127.0.0.1 argocd.localhost"
+127.0.0.1 argocd.localhost
+127.0.0.1 opensearch.localhost
+127.0.0.1 logs.localhost
+127.0.0.1 database.localhost"
 
 echo -e "${YELLOW}Adding entries to /etc/hosts...${NC}"
 echo "This requires administrator privileges."
@@ -39,6 +42,9 @@ if sudo bash -c "echo '$HOSTS_ENTRIES' >> /etc/hosts"; then
     echo "• MinIO API:         http://minio-api.localhost"
     echo "• Rancher:           http://rancher.localhost"
     echo "• ArgoCD:            http://argocd.localhost"
+    echo "• OpenSearch Logs:   http://opensearch.localhost"
+    echo "• Log Viewer:        http://logs.localhost"
+    echo "• Database Manager:  http://database.localhost"
     echo
     echo -e "${YELLOW}Note: Some services may take a moment to become available.${NC}"
 else

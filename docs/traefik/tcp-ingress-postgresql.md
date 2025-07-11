@@ -48,12 +48,12 @@ spec:
 ### Direct Connection
 ```bash
 # PostgreSQL connection via Traefik TCP Ingress
-PGPASSWORD="1q2w3e4r@123" psql -h 127.0.0.1 -p 5432 -U admin -d devdb
+PGPASSWORD="1q2w3e4r@123" psql -h 127.0.0.1 -p 5432 -U admin -d {database}
 ```
 
 ### Application Connection String
 ```
-postgresql://admin:1q2w3e4r@123@127.0.0.1:5432/devdb
+postgresql://admin:1q2w3e4r@123@127.0.0.1:5432/{database}
 ```
 
 ## 📚 Related Documentation
@@ -70,7 +70,7 @@ Test TCP connectivity:
 nc -zv 127.0.0.1 5432
 
 # Test PostgreSQL connection
-psql -h 127.0.0.1 -p 5432 -U admin -d devdb -c "SELECT version();"
+psql -h 127.0.0.1 -p 5432 -U admin -d {database} -c "SELECT version();"
 ```
 
 For detailed troubleshooting and implementation steps, refer to the [complete implementation documentation](../postgresql/traefik-tcp-postgres-implementation.md).

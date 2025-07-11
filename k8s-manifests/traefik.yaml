@@ -67,6 +67,8 @@ data:
         address: ":8080"
       postgres:
         address: ":5432"
+      mysql:
+        address: ":3306"
     providers:
       kubernetesIngress: {}
       kubernetesCRD:
@@ -116,6 +118,8 @@ spec:
           containerPort: 8080
         - name: postgres
           containerPort: 5432
+        - name: mysql
+          containerPort: 3306
         volumeMounts:
         - name: config
           mountPath: /config
@@ -169,6 +173,10 @@ spec:
     port: 8080
     targetPort: 8080
     nodePort: 30808
+  - name: mysql
+    port: 3306
+    targetPort: 3306
+    nodePort: 30306
   - name: postgres
     port: 5432
     targetPort: 5432
